@@ -1,0 +1,2 @@
+# alien_invasion
+基于Python的pygame开发的一款2D小游戏：外星人入侵
