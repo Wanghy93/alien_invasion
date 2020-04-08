@@ -1,0 +1,279 @@
+本文档整理该游戏项目中所涉及到的有关Python的知识点
+
+一、武装飞船
+
+    1.规划项目
+
+    2.安装Pygame                                          可以直接在Terminal中输入 pip install pygame （前提先安装pip)
+
+    3.开始游戏项目
+
+      1.创建Pygame窗口以及响应用户输入
+        初始化游戏背景                                    pygame.init()
+        创建screen的显示窗口                              screen.display.set_mode((1200, 800))    # (1200,800)是元祖，指定屏幕尺寸
+        给项目起名称                                      pygame.display.set_caption("game_name")
+        监听事件                                          pygame.event.get()
+        判断事件（键盘/鼠标按什么键）                     event.type == pygame.QUIT  # QUIT 指关闭按钮，或 event.key == pygame.k_x   x指键位
+        退出游戏                                          sys.exit()
+        让最近绘制的屏幕可见                              pygame.display.flip()
+
+      2.设置背景色
+        设置背景色                                        bg_color = (x, y, z)    # RGB值指定颜色，由红绿蓝组成，每个取值0-255，红色(255, 0, 0)，绿色(0, 255, 0)，蓝色(0, 0, 255)
+        用背景色填充屏幕（只接受一个实参：一种颜色）      screen.fill(bg_color)
+
+      3.创建游戏类
+        屏幕设置（在init中设置）                          self.screen_width/screen_height/bg_color
+
+    4.添加飞船图像
+
+      使用位图，格式为bmp（我试过jpg的也可以，但Python默认加载位图）
+
+      1.创建Ship类                                        class Ship()
+        加载飞船图像                                      pygame.image.load("image/ship.bmp") # 双引号内是图片路径
+        获取image对应surface的属性rect                    image.get_rect()
+        在指定位置将图像绘制到屏幕上                      screen.blit()   # 两个实参：image图像和rect实参
+        位置属性                                          中央center  x坐标centerx  y坐标centery
+                                                            （屏幕左上角坐标(0,0)向右移动x增大，像下移动y增大）
+                                                          左端left  右端 right  顶端top  底端bottom
+
+      2.在屏幕上绘制飞船
+        创建一艘飞船实例                                  ship = Ship()
+
+    5.驾驶飞船
+
+      1.响应按键
+        每次按键都被注册为一个 KEYDOWN 事件               event.type == pygame.KEYDOWN   # 松开按键： KEYUP
+        按动箭头←和箭头→的设置                          pygame.K_LEFT/pygame.K_RIGHT
+
+      2.允许不断移动
+        使用moving_right标志实现                          开始设为False，按键则为True，如果一直按→，则rect.centerx += 1
+
+      3.左右移动                                          加上 x 或 y 即可
+        解决玩家按下一个方向键不松接着按另一个方向键      使用elif，这样就不会造成开始按键的"死锁"，结果就是左右都监听，原地不动
+
+      4.调整飞船的速度
+        在setting中定义一个飞船移动速度的变量即可         1表示移动一个像素点，一般可把飞船设为1.5，外星人设为1
+
+      5.限制飞船的活动范围（不让飞船移出设置的屏幕）
+        判断飞船右坐标小于等于屏幕右边缘、左坐标大于0即可
+
+    6.射击
+
+      1.添加子弹设置
+        在方法init后存储新类 Bullets 所需的值             子弹速度bullet_speed_factor   宽度bullet_width
+                                                          高度(长)bullet_height         颜色bullet_color
+      2.创建Bullet类
+        继承pygame.sprite.Sprite                          super().__init__()  # Sprite精灵
+            # 精灵：通过使用精灵，可将游戏中相关的元素编组，进而同时操作编组中的所有元素
+        在屏幕上绘制子弹                                  pygame.draw.rect()
+
+      3.将子弹存储到编组group中
+        存储子弹的编组                                    bullets = Group()
+
+      4.开火
+        将新子弹存储到编组bullets中                       bullets.add(new_bullet)
+        重绘所有子弹                                      bullets.sprites()    # 使用for循环，遍历bullets中的精灵，对每个精灵都调用draw_bullet()进行绘制
+
+      5.删除已消失的子弹    * 子弹飞出屏幕并未消失，还占用内存，因此对屏幕外的子弹进行删除，不能直接删列表或编组中的条目（子弹），而应复制一份进行遍历
+        复制编组                                          bullets.copy()
+        删除编组中的子弹                                  bullets.remove(bullet)
+
+      6.限制子弹数量
+        在settings中设置未消失的子弹数限制为3（都OK）     定义变量bullets_allowed即可，但在监听键盘按键时使用len作为if条件加到更新子弹上
+
+
+二、创建外星人alien
+
+    1.使用户按Q键即可退出游戏，无需操作鼠标             event.key = pygame.K_q
+
+    2. 创建第一个外星人
+
+      1.创建Alien类                                     继承 Sprite
+        外星人最初在屏幕左上角附近                      rect.x = rect.width/rect.y = rect.right
+        储存外星人准确位置                              self.x = float(self.rect.x)  # 使用浮点型float
+        绘制外星人跟绘制飞船是一样的                    self.screen.blit(self.image, self.rect)
+
+      2.创建Alien实例                                   alien = Alien(参数)
+
+      3.让外星人出现在屏幕上
+
+    3.创建一群外星人
+
+      1.确定一行可容纳多少个外星人
+        可利用的x空间                                 available_space_x = ai_settings.screen.screen_width - (2 * alien_width)
+        x方向可放置外星人的数量                       number_aliens_x = available_space_x / (2 * alien_width)
+
+      2.创建多行外星人
+        ①创建一个外星人的空编组（存储所有外星人）    aliens = Group()
+        ②创建外星人群                                def create_fleet()   # 在game_function.py中创建该函数
+        ③自动绘制编组的每个元素（绘制编组的外星人）  aliens.draw(screen)   # 参数screen指在screen上绘制
+
+      3.创建外星人群
+        将外星人数量转换为整形确保外星人是整数        number_aliens_x = int(available_space_x / (2 * alien_width))
+        使用for循环number_aliens_x的范围并添加        aliens.add()    # 在循环后和添加前设置外星人的属性
+
+      4.添加多行外星人
+        可用垂直空间                                  available_space_y = ai_settings.screen_height - 3 * alien_height - ship_height
+            将屏幕高度减去第一行外星人的上边距（外星人高度）、飞船高度以及最初外星人高度加上外星人间距（外星人高度的两倍）
+        y方向可容纳多少行（也设置成整数行）           number_rows = int(available_space_y / (2 * alien_height))
+        创建多行：使用两个嵌套在一起的循环            一个内部循环：创建一行外星人；一个外部循环：从零数到要创建的外星人行数
+            Python将重复执行创建单行外星人的代码（内部循环），重复次数为number_rows（外部循环）
+        * 外星人y坐标：alien.rect.y = alien.rect.height + 2 * alien.rect.height * row_number  # row_number 存储行号，将每行都沿屏幕依次向下放置
+            相邻外星人行的y坐标相差外星人高度的两倍，因此将外星人高度乘2再乘行号，第一行行号为0，因此第一行垂直位置不变，其他行按顺序依次向下放置
+
+    4.让外星人群移动
+
+      1.向右移动外星人（移到右边界便消失）
+        设置外星人向右移动速度 alien_speed_factor = 1
+        x += alien_speed_factor # x指水平方向，最左边x=0，向右移动x值增大
+        对编组aliens调用管理飞船位置的方法update()，这样会使编组的所有外星人都调用该方法，使其都进行移动
+
+      2.创建表示外星人移动方向的设置：外星人移动只有两种可能，使用数字1增大x，-1减小x
+        设置fleet_drop_speed指定有外星人撞到屏幕边缘会向下移动的速度 alien_drop_speed = 10
+        使用fleet_direction = 1表示left，即向左移， =  -1 表示right，即向右移，在外星人改变方向时切换1和-1的值进而改变外星人的移动方向
+
+      3.检查外星人是否撞到了屏幕边缘
+        通过做比较即可：比较外星人属性的右边缘right是否大于等于屏幕的右边缘，开始肯定是小于的，等到等于时便改变外星人移动方向，即返回True
+            另外，当外星人到达右边缘向左走时，其左边缘rect.left小于等于0时也改变方向，返回True
+            改变方向，只需让外星人向右移动速度乘fleet_direction即可，1表示向右移动，-1表示向左移动了
+
+      4.向下移动外星人群并改动移动方向（设置完外星人群会向右移动，碰到边界向下移动一点再向左，不断重复这样的循环进行移动）
+        检测是否有外星人到达了右边缘或左边缘：遍历外星人群aliens.sprites()，如果有外星人到达边缘（def check_edges()），就改变其方向（def change_fleet_direction()）然后退出循环
+        向下移的方法中，向下移：rect.y += fleet_drop_speed
+        下移后fleet_direction *= -1，使其转变左右移动的方向
+
+    5.射杀外星人（子弹与外星人碰撞后一起消失或消失其一）
+
+      1.检测子弹与外星人的碰撞 pygame.sprite.groupcollide() 传递四个参数，两个碰撞的游戏元素、两个元素碰撞后是否消失
+        pygame.sprite.groupcollide(bullets, aliens, True, True)     # 第一个True与bullets相关，表示碰撞后消失，False不消失
+            该方法返回一个字典：每个键是一颗子弹，对应的值都是被击中的外星人。每当子弹和外星人的rect重叠时，该方法就在它返回的字典中添加一个键值对
+        更新子弹位置后立即检查碰撞
+
+      2.为测试创建大子弹
+        将bullet_width设置成大的值 或 bullets的属性设为False[表示子弹到屏幕顶端才消失]
+
+      3.生成新的外星人群（消灭一群又显示一群）
+        判断外星人aliens长度为0时删除编组中余下的子弹bullets.empty()，并创建一群新的外星人create_fleet()
+
+      4.提高子弹的速度
+        bullet_speed_factor = 3
+
+    6.结束游戏（外星人碰撞飞船或到达底端，飞船被摧毁；设置飞船数量）
+
+      1.检测外星人和飞船碰撞
+        判断外星人与飞船碰撞，使用pygame.sprite.spritecollideany()方法，该方法接受两个参数：一个精灵ship和一个编组aliens
+        它检查编组是否有成员与精灵发生了碰撞，并在找到与精灵发生了碰撞的成员后就停止遍历编组。如果没发生碰撞，该方法返回None
+        当外星人撞到飞船时，需执行：删除余下的所有外星人和子弹，让飞船重新居中，创建一群新的外星人
+
+      2.响应外星人和飞船碰撞（统计碰撞次数、使用time.sleep()暂停一会让玩家可以看到，碰撞后清空子弹和外星人，“新飞船”(其实还是那条飞船)居中在屏幕底端）
+        定义 初始化在游戏运行期间可能发生变化的统计信息 方法，同时玩家开始新游戏时也能调用该方法
+        暂停的话导入time模块 from time import sleep     sleep()  # 接受秒数数字参数，可设置0.5秒，只需让玩家看到自己玩完一命即可
+
+      3.有外星人到达屏幕底端（当外星人到达屏幕底端的处理结果跟外星人与飞船相撞一样，都调用ship_hit()方法）
+        判断外星人底端大于等于屏幕底端，开始肯定是小于的，当外星人到达屏幕底端时等于屏幕底端，则表明有外星人到达底端了，其它不用管，break退出循环，玩家丢失一艘飞船
+
+      4.游戏结束（之前设置的飞船数=3，小于1后为0，之后会变成负数导致游戏无法结束，因此设置个属性，为0时游戏结束）
+        game_active活动状态开始为True，当玩家的飞船用完后，该状态改为False --->在ship_hit()方法中添加该情况
+
+    7.确定应运行游戏的哪些部分（哪些部分不受上边游戏属性限制会一直执行以及上边的游戏属性活跃时执行不活跃时不执行）
+        方法update、update_bullets、update_aliens受game_active控制，check_events、update_screen不受控制
+
+
+三、记分
+
+    1.添加Play按钮（用于根据需要启动游戏以及游戏结束后重启游戏）
+
+      1.创建Button类（创建带标签的实心矩形）
+        导入pygame.font模块，它让Pygame能够将文本渲染到屏幕上
+        步骤：
+            ①初始化按钮属性
+                def __init__(self, ai_settings, screen, msg):
+                    self.screen = screen
+                    self.screen_rect = screen.get_rect()
+            ②设置按钮的尺寸和其他属性
+                    self.width, self.height = 200, 50   # 按钮高、宽
+                    self.button_color = (0, 250, 0)     # 按钮背景色
+                    self.text_color = (255, 255, 255)   # 字体颜色
+                    self.font = pygame.font.SysFont(None, 48)   # 字体None为默认字体，48是字体大小
+            ③创建按钮的rect对象，并使其居中
+                    self.rect = pygame.Rect(0, 0, self.width, self.height)
+                    self.rect.center = self.screen_rect.center
+            ④按钮的标签只需创建一次
+                    self.prep_msg(msg)  # msg是在按钮上显示的文本
+            ⑤要显示的字符串渲染成图像来处理文本，单独创建方法prep_msg，将msg传递给它
+                渲染：self.msg_image = self.font.render(msg, True, self.text_color, self.button_color)  # 参数：文本、开启还是关闭反锯齿功能、文本颜色、背景色
+                之后根据文本图像创建一个rect并将其center属性设置为按钮的center属性
+            ⑥创建方法draw_button，通过调用它将按钮显示在屏幕上
+                screen.fill(button_color, rect)         # 绘制表示按钮的矩形
+                screen.blit(msg_image, msg_image_rect)  # 传递了图像和与图像相关联的rect对象，在屏幕上绘制文本图像
+
+      2.在屏幕上绘制按钮（在屏幕更新时显示按钮）
+        创建按钮：paly_button = Button(ai_settings, screen, "Play")  # 创建了按钮的实例，然后将其传递给update_screen()，以便能够在屏幕更新时显示按钮
+        然后修改update_screen方法，在游戏处于非活动状态时显示Play按钮
+
+      3.开始游戏（监视Play按钮相关鼠标事件，以在玩家单击Play按钮时开始新游戏）
+        监视与玩家点击Play按钮的鼠标事件
+            elif event.type == pygame.MOUSEBUTTONDOWN:      # 只要玩家点击屏幕都会产生一个事件
+                mouse_x, mouse_y = pygame.mouse,get_pos()   # 元祖，返回玩家单击时鼠标的x和y坐标
+                check_play_button(stats, play_button, mouse_x, mouse_y)     # check_play_button方法使用collidepoint()方法检测鼠标点击的坐标是否在按钮范围内，返回布尔
+
+
+      4.重置游戏（处理游戏结束的情况[重置统计信息、删除现有的外星人和子弹、创建一群新外星人、飞船居中]，玩家点击Play按钮可以重新开始游戏）
+
+      5.将Play按钮切换到非活动状态（游戏开始后玩家点击Play按钮原来所处的位置会重新开始游戏，修复这个问题可让game_active为False时才开始
+
+      6.隐藏光标（在游戏处于活动状态时让光标不可见
+        pygame.mouse.set_visible(False)
+
+    2.提高等级
+
+      1.修改外星人速度设置 speedup_scale控制游戏节奏的加快速度（原速度 *= speedup_scale：1为原速度，2为原速度的2倍）
+        注意加入fleet_direction为1或-1，使外星人左右移动的速度都加快，开始为1表示让外星人向右移动
+        增加速度方法在消灭了一群外星人，删除了现有子弹后添加
+
+      2.重置速度（玩家开始新游戏时重置原来的速度）
+        新增一个方法，初始化随游戏进行而变化的属性：def initialize_dynamic_settings()
+
+    3.记分（实现一个记分系统，实时跟踪玩家的得分，并显示最高得分。当前等级和余下的飞船数）
+        在reset_stats()而不是init()中记分，因为每次开始新游戏时都要重置得分
+
+      1.显示记分（创建记分的类，渲染到屏幕上一幅图像）
+        在屏幕上显示文本，首先需导入pygame.font，在屏幕上显示得分即可，无需按钮，因此只需使用blit()方法即可。
+
+      2.创建记分牌（显示得分）
+
+      3.在外星人消灭时更新得分（指定击中一个外星人多少分，实时显示得分，每当外星人被击中时更新stats.score的值，再调用prep_score()更新得分图像）
+        collisions = pygame.sprite.groupcollide(bullets, aliens, True, True)该方法中，当子弹撞到外星人时，pygame会返回一个字典（键：子弹；值：外星人）
+        检查这个字典是否存在，存在就加分
+
+      4.将消灭的每个外星人的点数都计入得分（修复遗漏的每个外星人，都加分：调整检测子弹和外星人碰撞的方式）
+        if collisions:
+            for aliens in collisions.values():  # 与每颗子弹碰撞的是外星人列表，相当于一颗子弹对应一个外星人列表，一颗子弹杀死多个外星人
+                stats.score += ai_settings.alien_points * len(aliens)   # 一个外星人分数乘以列表中的外星人长度（即个数），便可以正确得出得分
+                sb.prep_score()     # 更新当前得分
+
+      5.提高点数（等级越高，外星人点数越大）
+        让点数为整数 int()
+
+      6.将得分圆整
+        显示为10的整数倍round(score, -1)，并添加逗号表示千位分隔符 "{:,}".format(score)
+
+      7.最高得分
+        在任何情况下都不应重置最高得分；每当有外星人消灭时都要比较当前得分与最高得分，当前得分高则更新
+
+      8.显示等级（在游戏中显示玩家的等级）
+        格式化输出字符串 -->  "{:,}".format()
+        开始新游戏时更新记分和等级图像，在按钮Play被单击时触发重置
+
+      9.显示余下的飞船数
+        在Ship类中继承Sprite，初始化时使用super(Ship, self).__init__()
+        创建飞船编组Group，创建显示还余下多少飞船的方法prep_ship()，在飞船被外星人撞到或飞船到达屏幕底端时都调用该方法
+
+
+
+
+其他：
+    1.重构：旨在简化既有代码的结构，使其更容易扩展
+        一开始将代码编写的尽可能简单，并在项目越来越复杂时进行重构
+
+    2.扩展：可增加难度或降低难度、可使用pygame.mixer模块添加音效，如爆炸声和射击声
